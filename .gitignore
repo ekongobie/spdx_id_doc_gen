@@ -1,0 +1,5 @@
+# CACHE
+__pycache__/
+
+# egg info
+*.egg-info/
