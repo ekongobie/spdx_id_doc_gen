@@ -8,7 +8,7 @@ from spdx.checksum import Algorithm
 from spdx.creationinfo import Tool
 from spdx.document import Document
 from spdx.document import License
-from spdx.document import ExtractedLicense
+from spdx.document import ExtractedLicense, ExternalDocumentRef
 from spdx.file import File
 from spdx.package import Package
 from spdx.utils import NoAssert
@@ -41,7 +41,11 @@ def get_codebase_extra_params(path_or_file):
     "header": "",
     "tool_name": "SPDXID Doc Generator",
     "tool_version": "1.0",
-    "notice": "SPDXID Doc Generator"
+    "notice": "SPDXID Doc Generator",
+    "creator_comment": "Created by SPDXID Document generator",
+    "ext_doc_ref": "SPDX-DOC-GENERATOR",
+    "doc_ref": "SPDXRef-DOCUMENT",
+    "lic_identifier": "CC0-1.0"
     }
 
 
@@ -50,20 +54,6 @@ def create_spdx_file(path_or_file, output_file_name, id_scan_results, doc_type):
     Write identifier scan results as SPDX Tag/value or RDF.
     """
     code_extra_params = get_codebase_extra_params(path_or_file)
-
-    spdx_document = Document(Version(2, 1), License.from_identifier('CC0-1.0'))
-    spdx_document.comment = code_extra_params["notice"]
-    tool_name = code_extra_params["tool_name"] or 'SPDXID Doc Generator'
-    spdx_document.creation_info.add_creator(Tool(code_extra_params["tool_name"] + ' ' + code_extra_params["tool_version"]))
-    spdx_document.creation_info.set_created_now()
-
-    package = spdx_document.package = Package(
-        name=basename(path_or_file),
-        download_location=NoAssert()
-    )
-
-    # Use a set of unique copyrights for the package.
-    package.cr_text = set()
     output_file = None
     if isPath(path_or_file):
         full_file_path = os.path.join(path_or_file, output_file_name + "." + doc_type)
@@ -72,6 +62,26 @@ def create_spdx_file(path_or_file, output_file_name, id_scan_results, doc_type):
         file_dir = os.path.dirname(os.path.abspath(path_or_file))
         full_file_path = os.path.join(file_dir, output_file_name + "." + doc_type)
         output_file = open(full_file_path, "wb+")
+
+    spdx_document = Document(version=Version(2, 1),
+                             data_license=License.from_identifier(code_extra_params["lic_identifier"]))
+    ext_doc_ref = ExternalDocumentRef(code_extra_params["ext_doc_ref"], code_extra_params["tool_version"], Algorithm("SHA1", get_hash(full_file_path or '')))
+    spdx_document.add_ext_document_reference(ext_doc_ref)
+    spdx_document.comment = code_extra_params["notice"]
+    spdx_document.name = code_extra_params["notice"]
+    spdx_document.namespace = code_extra_params["notice"]
+    spdx_document.creation_info.add_creator(Tool(code_extra_params["tool_name"] + ' ' + code_extra_params["tool_version"]))
+    spdx_document.creation_info.set_created_now()
+    spdx_document.creation_info.comment = code_extra_params["creator_comment"]
+    spdx_document.spdx_id = code_extra_params["doc_ref"]
+
+    package = spdx_document.package = Package(
+        name=basename(path_or_file),
+        download_location=NoAssert()
+    )
+
+    # Use a set of unique copyrights for the package.
+    package.cr_text = set()
 
     if isPath(path_or_file):
         for file_data in id_scan_results:
