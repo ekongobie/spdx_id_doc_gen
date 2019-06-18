@@ -17,15 +17,28 @@ from spdx.version import Version
 
 TAG_VALUE = "tv"
 RDF = "rdf"
+CODEBASE_EXTRA_PARAMS = {
+                        "header": "",
+                        "tool_name": "SPDXID Doc Generator",
+                        "tool_version": "1.0",
+                        "notice": "SPDXID Doc Generator",
+                        "creator_comment": "Created by SPDXID Document generator",
+                        "ext_doc_ref": "SPDX-DOC-GENERATOR",
+                        "doc_ref": "SPDXRef-DOCUMENT",
+                        "lic_identifier": "CC0-1.0"
+                        }
 
 def pathOrFileExists(path_or_file):
     return os.path.isdir(path_or_file) or os.path.isfile(path_or_file)
 
+
 def isPath(path_or_file):
     return os.path.isdir(path_or_file)
 
+
 def isFile(path_or_file):
     return os.path.isfile(path_or_file)
+
 
 def get_hash(file_path):
     sha1sum = hashlib.sha1()
@@ -36,17 +49,47 @@ def get_hash(file_path):
         block = source.read(2**16)
     return sha1sum.hexdigest()
 
+
 def get_codebase_extra_params(path_or_file):
-    return {
-    "header": "",
-    "tool_name": "SPDXID Doc Generator",
-    "tool_version": "1.0",
-    "notice": "SPDXID Doc Generator",
-    "creator_comment": "Created by SPDXID Document generator",
-    "ext_doc_ref": "SPDX-DOC-GENERATOR",
-    "doc_ref": "SPDXRef-DOCUMENT",
-    "lic_identifier": "CC0-1.0"
-    }
+    return CODEBASE_EXTRA_PARAMS
+
+def get_package_file(path_or_file, file_name):
+    if isPath(path_or_file):
+        version_file_path = os.path.join(path_or_file, file_name)
+        if os.path.exists(version_file_path):
+            return version_file_path
+    return None
+
+def get_package_version(path_or_file):
+    version_file = get_package_file(path_or_file, "VERSION")
+    version_major = None
+    version_minor = None
+    if version_file:
+        version_file_content = open(version_file, "r")
+        for line in version_file_content:
+            if "VERSION_MAJOR" in line:
+                version_major = line.split("=")[1]
+            if "VERSION_MINOR" in line:
+                version_minor = line.split("=")[1]
+        if version_major and version_minor:
+            return "{0}.{1}".format(version_major.strip(" ").strip("\n"), version_minor.strip(" ").strip("\n"))
+    return None
+
+
+def get_package_verif_code(all_files, output_file_name, id_scan_results):
+    verificationcode = 0
+    filelist = ""
+    templist = []
+    for item in id_scan_results:
+        if not output_file_name in item["FileName"]:
+            n = len(id_scan_results) - 1
+            templist.append(get_hash(item["FileName"]))
+    # sort the sha  values
+    templist.sort()
+    for item in templist:
+        filelist = "{0}{1}".format(filelist, item)
+    verificationcode = hashlib.sha1(filelist.encode())
+    return verificationcode.hexdigest()
 
 
 def create_spdx_file(path_or_file, output_file_name, id_scan_results, doc_type):
@@ -77,24 +120,44 @@ def create_spdx_file(path_or_file, output_file_name, id_scan_results, doc_type):
 
     package = spdx_document.package = Package(
         name=basename(path_or_file),
-        download_location=NoAssert()
+        download_location=NoAssert(),
+        version=get_package_version(path_or_file)
     )
 
     # Use a set of unique copyrights for the package.
     package.cr_text = set()
 
+    # package.files = ["kfjd"]
+    # package.check_sum = "ksdjfnksf ksjdfnskdf"
+
+    package.homepage = "NONE"
+    package.verif_code = get_package_verif_code(path_or_file, output_file_name, id_scan_results)
+
+    package.source_info = "ksdjfnksf ksjdfnskdf"
+    # package.conc_lics = "NOASSERTION"
+    #
+    # package.license_declared = "ksdjfnksf ksjdfnskdf"
+    # package.license_comment = "ksdjfnksf ksjdfnskdf"
+    #
+    # package.licenses_from_files = ["text"]
+    # package.summary = "ksdjfnksf ksjdfnskdf"
+    #
+    # package.description = "ksdjfnksf ksjdfnskdf"
+    # package.verif_exc_files = ["kfjd"]
+
     if isPath(path_or_file):
         for file_data in id_scan_results:
-            name = file_data["FileName"].replace(path_or_file, '.')
-            file_entry = File(
-                name=name,
-                chk_sum=Algorithm('SHA1', get_hash(file_data["FileName"]) or '')
-            )
-            spdx_license = License.from_identifier(file_data["SPDXID"])
-            file_entry.add_lics(spdx_license)
-            package.add_lics_from_file(spdx_license)
-            file_entry.conc_lics = NoAssert()
-            package.add_file(file_entry)
+            if not output_file_name in file_data["FileName"]:
+                name = file_data["FileName"].replace(path_or_file, '.')
+                file_entry = File(
+                    name=name,
+                    chk_sum=Algorithm('SHA1', get_hash(file_data["FileName"]) or '')
+                )
+                spdx_license = License.from_identifier(file_data["SPDXID"])
+                file_entry.add_lics(spdx_license)
+                package.add_lics_from_file(spdx_license)
+                file_entry.conc_lics = NoAssert()
+                package.add_file(file_entry)
 
     if len(package.files) == 0:
         if doc_type == TAG_VALUE:
