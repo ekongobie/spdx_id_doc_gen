@@ -5,7 +5,7 @@ from __future__ import print_function
 import argparse
 import sys
 from .helpers import getAllPaths, getIdentifierForPaths
-from .core import pathOrFileExists, TAG_VALUE, RDF, create_spdx_file
+from .core import pathOrFileExists, TAG_VALUE, RDF, SPDXFile
 
 
 def main(project_path, doc_type):
@@ -17,10 +17,12 @@ def main(project_path, doc_type):
         allPaths = getAllPaths(project_path)
         allIdentifiers = getIdentifierForPaths(allPaths)
     if doc_type == TAG_VALUE:
-        create_spdx_file(project_path, spdx_file_name, allIdentifiers, TAG_VALUE)
+        spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, TAG_VALUE)
+        spdx_file.create()
     else:
-        create_spdx_file(project_path, spdx_file_name, allIdentifiers, RDF)
-    print("all identifiers in path", allIdentifiers)
+        spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, RDF)
+        spdx_file.create()
+    # print("all identifiers in path", allIdentifiers)
     sys.exit(0)
 
 

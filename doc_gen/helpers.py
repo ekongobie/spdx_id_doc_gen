@@ -1,20 +1,6 @@
 import logging
 import os
-
-# filenames to ignore altogether, and not include in reports
-IGNORE_FILENAMES = [
-    ".DS_Store",
-]
-
-# extensions to report on, but skip scanning
-SKIP_EXTENSIONS = [
-    ".gif",
-]
-
-# directories whose files should be reported on, but skip scanning
-SKIP_DIRECTORIES = [
-    "LICENSES",
-]
+from .utils import IGNORE_FILENAMES, SKIP_EXTENSIONS, SKIP_DIRECTORIES
 
 class ScanData(object):
     def __init__(self):
@@ -153,7 +139,7 @@ def getIdentifierForPaths(paths, numLines=20):
              ScanData is (parsed identifier, line number) if found;
                          (None, -1) if not found.
     """
-    print("paths", paths)
+    # print("paths", paths)
     results = []
     for filePath in paths:
         results.append(getIdentifierData(filePath, numLines))
