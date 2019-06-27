@@ -27,6 +27,7 @@ RDF = "rdf"
 CODEBASE_EXTRA_PARAMS = {
                         "header": "",
                         "tool_name": "SPDXID Doc Generator",
+                        "tool_name_rdf": "SPDXID.Doc.Generator",
                         "tool_version": "1.0",
                         "notice": "SPDXID Doc Generator",
                         "creator_comment": "Created by SPDXID Document generator",

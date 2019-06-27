@@ -14,19 +14,27 @@ from spdx.package import Package
 from spdx.utils import NoAssert
 from spdx.utils import SPDXNone
 from spdx.version import Version
-from .utils import TAG_VALUE, RDF, CODEBASE_EXTRA_PARAMS, FILES_TO_EXCLUDE, pathOrFileExists,
-                    isPath, isFile, get_file_hash, get_codebase_extra_params, get_package_file,
-                    get_package_version, shouldSkipFile
+from .utils import TAG_VALUE, RDF, CODEBASE_EXTRA_PARAMS, FILES_TO_EXCLUDE, pathOrFileExists, isPath, isFile, get_file_hash, get_codebase_extra_params, get_package_file, get_package_version, shouldSkipFile
+from checksumdir import dirhash
+
+# class PkgChecksum(object):
+#     def __init__(self):
 
 class SPDXFile(object):
     def __init__(self, path_or_file, output_file_name, id_scan_results, doc_type):
+        self.is_file = isFile(path_or_file)
         self.path_or_file = path_or_file
+        self.file_to_scan = None
+        if self.is_file:
+            self.file_to_scan = path_or_file
+            self.path_or_file = os.path.dirname(path_or_file)
         self.output_file_name = output_file_name
         self.id_scan_results = id_scan_results
         self.doc_type = doc_type
         self.output_file = None
         self.code_extra_params = get_codebase_extra_params(self.path_or_file)
         self.full_file_path = None
+        self.spdx_document = None
 
     def get_package_version(self):
         return get_package_version(self.path_or_file)
@@ -45,6 +53,26 @@ class SPDXFile(object):
         verificationcode = hashlib.sha1(filelist.encode())
         return verificationcode.hexdigest()
 
+    def get_package_checksum(self):
+        sha1hash = None
+        if not self.is_file:
+            sha1hash   = dirhash(self.path_or_file, 'sha1')
+        else:
+            h = hashlib.sha1()
+            # open file for reading in binary mode
+            with open(self.file_to_scan,'rb') as file:
+                # loop till the end of the file
+                chunk = 0
+                while chunk != b'':
+                    # read only 1024 bytes at a time
+                    chunk = file.read(1024)
+                    h.update(chunk)
+            # return the hex representation of digest
+            sha1hash = h.hexdigest()
+        return sha1hash
+
+
+
     def get_output_file(self):
         if isPath(self.path_or_file):
             self.full_file_path = os.path.join(self.path_or_file, self.output_file_name + "." + self.doc_type)
@@ -54,31 +82,39 @@ class SPDXFile(object):
             self.full_file_path = os.path.join(file_dir, self.output_file_name + "." + self.doc_type)
             self.output_file = open(self.full_file_path, "wb+")
 
-    def set_creation_info(self, spdx_document):
+    def set_creation_info(self):
         ext_doc_ref = ExternalDocumentRef(self.code_extra_params["ext_doc_ref"], self.code_extra_params["tool_version"], Algorithm("SHA1", get_file_hash(self.full_file_path or '')))
-        spdx_document.add_ext_document_reference(ext_doc_ref)
-        spdx_document.comment = self.code_extra_params["notice"]
-        spdx_document.name = self.code_extra_params["notice"]
-        spdx_document.namespace = self.code_extra_params["notice"]
-        spdx_document.creation_info.add_creator(Tool(self.code_extra_params["tool_name"] + ' ' + self.code_extra_params["tool_version"]))
-        spdx_document.creation_info.set_created_now()
-        spdx_document.creation_info.comment = self.code_extra_params["creator_comment"]
-        spdx_document.spdx_id = self.code_extra_params["doc_ref"]
+        self.spdx_document.add_ext_document_reference(ext_doc_ref)
+        # spdx_document.comment = self.code_extra_params["notice"]
+        if self.doc_type == TAG_VALUE:
+            self.spdx_document.creation_info.add_creator(Tool(self.code_extra_params["tool_name"] + ' ' + self.code_extra_params["tool_version"]))
+            self.spdx_document.namespace = self.code_extra_params["notice"]
+            self.spdx_document.name = self.code_extra_params["notice"]
+        else:
+            self.spdx_document.creation_info.add_creator(Tool(self.code_extra_params["tool_name_rdf"] + '.' + self.code_extra_params["tool_version"]))
+            self.spdx_document.namespace = self.code_extra_params["tool_name_rdf"]
+            self.spdx_document.name = self.code_extra_params["tool_name_rdf"]
+        self.spdx_document.creation_info.set_created_now()
+        self.spdx_document.creation_info.comment = self.code_extra_params["creator_comment"]
+        self.spdx_document.spdx_id = self.code_extra_params["doc_ref"]
 
     def set_package_info(self, package):
         # Use a set of unique copyrights for the package.
-        package.cr_text = set()
+        package.name = basename(self.path_or_file)
+        if self.file_to_scan:
+            package.name = "{0}/{1}".format(basename(self.path_or_file), basename(self.file_to_scan))
 
         # package.files = ["kfjd"]
-        # package.check_sum = "ksdjfnksf ksjdfnskdf"
+        package.check_sum = Algorithm("SHA1", self.get_package_checksum())
 
         package.homepage = "NONE"
         package.verif_code = self.get_package_verification_code()
 
         package.source_info = "ksdjfnksf ksjdfnskdf"
-        # package.conc_lics = "NOASSERTION"
+        package.conc_lics = SPDXNone()
         #
-        # package.license_declared = "ksdjfnksf ksjdfnskdf"
+        package.license_declared = SPDXNone()
+        package.cr_text = SPDXNone()
         # package.license_comment = "ksdjfnksf ksjdfnskdf"
         #
         # package.licenses_from_files = ["text"]
@@ -92,11 +128,12 @@ class SPDXFile(object):
         Write identifier scan results as SPDX Tag/value or RDF.
         """
         self.get_output_file()
-        spdx_document = Document(version=Version(2, 1),
+        self.spdx_document = Document(version=Version(2, 1),
                                  data_license=License.from_identifier(self.code_extra_params["lic_identifier"]))
-        self.set_creation_info(spdx_document)
-        package = spdx_document.package = Package(
-            name=basename(self.path_or_file),
+        self.set_creation_info()
+        # self.spdx_document.add_extr_lic(ExtractedLicense("JK"))
+        # self.spdx_document.add_extr_lic(ExtractedLicense(self.code_extra_params["lic_identifier"]))
+        package = self.spdx_document.package = Package(
             download_location=NoAssert(),
             version=self.get_package_version()
         )
@@ -110,10 +147,18 @@ class SPDXFile(object):
                         name=name,
                         chk_sum=Algorithm('SHA1', get_file_hash(file_data["FileName"]) or '')
                     )
-                    spdx_license = License.from_identifier(file_data["SPDXID"])
+                    spdx_license = None
+                    if self.doc_type == TAG_VALUE:
+                        spdx_license = License.from_identifier(file_data["SPDXID"])
+                    else:
+                        licenseref_id = 'SPDXID-Doc-Generator-' + file_data["SPDXID"]
+                        spdx_license = ExtractedLicense(licenseref_id)
+                        self.spdx_document.add_extr_lic(spdx_license)
                     file_entry.add_lics(spdx_license)
                     package.add_lics_from_file(spdx_license)
                     file_entry.conc_lics = NoAssert()
+                    file_entry.copyright = SPDXNone()
+                    file_entry.spdx_id = self.code_extra_params["doc_ref"]
                     package.add_file(file_entry)
 
         if len(package.files) == 0:
@@ -129,7 +174,7 @@ class SPDXFile(object):
 
         if package.files:
             spdx_output = io.StringIO()
-            write_document(spdx_document, spdx_output, validate=False)
+            write_document(self.spdx_document, spdx_output, validate=True)
             result = spdx_output.getvalue()
             if self.doc_type == TAG_VALUE:
                 result = result.encode('utf-8')

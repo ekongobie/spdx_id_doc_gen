@@ -2,27 +2,35 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import os
 import argparse
 import sys
 from .helpers import getAllPaths, getIdentifierForPaths
 from .core import pathOrFileExists, TAG_VALUE, RDF, SPDXFile
+from .utils import isPath, isFile
 
 
-def main(project_path, doc_type):
-    pathExists = pathOrFileExists(project_path)
+def main(item_to_scan, doc_type):
+    pathExists = pathOrFileExists(item_to_scan)
+    is_path = isPath(item_to_scan)
+    is_file = isFile(item_to_scan)
     allPaths = []
     allIdentifiers = []
     spdx_file_name = "spdx_document"
+    project_path = item_to_scan
     if pathExists:
-        allPaths = getAllPaths(project_path)
-        allIdentifiers = getIdentifierForPaths(allPaths)
+        if is_file:
+            allPaths.append(item_to_scan)
+            allIdentifiers = getIdentifierForPaths(allPaths)
+        if is_path:
+            allPaths = getAllPaths(project_path)
+            allIdentifiers = getIdentifierForPaths(allPaths)
     if doc_type == TAG_VALUE:
         spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, TAG_VALUE)
         spdx_file.create()
     else:
         spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, RDF)
         spdx_file.create()
-    # print("all identifiers in path", allIdentifiers)
     sys.exit(0)
 
 
