@@ -85,7 +85,7 @@ class SPDXFile(object):
     def set_creation_info(self):
         ext_doc_ref = ExternalDocumentRef(self.code_extra_params["ext_doc_ref"], self.code_extra_params["tool_version"], Algorithm("SHA1", get_file_hash(self.full_file_path or '')))
         self.spdx_document.add_ext_document_reference(ext_doc_ref)
-        # spdx_document.comment = self.code_extra_params["notice"]
+        self.spdx_document.comment = self.code_extra_params["notice"]
         if self.doc_type == TAG_VALUE:
             self.spdx_document.creation_info.add_creator(Tool(self.code_extra_params["tool_name"] + ' ' + self.code_extra_params["tool_version"]))
             self.spdx_document.namespace = self.code_extra_params["notice"]
@@ -114,7 +114,7 @@ class SPDXFile(object):
         package.conc_lics = SPDXNone()
         #
         package.license_declared = SPDXNone()
-        package.cr_text = SPDXNone()
+        package.cr_text = set()
         # package.license_comment = "ksdjfnksf ksjdfnskdf"
         #
         # package.licenses_from_files = ["text"]
@@ -131,7 +131,9 @@ class SPDXFile(object):
         self.spdx_document = Document(version=Version(2, 1),
                                  data_license=License.from_identifier(self.code_extra_params["lic_identifier"]))
         self.set_creation_info()
-        # self.spdx_document.add_extr_lic(ExtractedLicense("JK"))
+        # lic = ExtractedLicense("JK", "KJNDF")
+        # lic.text = "sfd"
+        # self.spdx_document.add_extr_lic([lic])
         # self.spdx_document.add_extr_lic(ExtractedLicense(self.code_extra_params["lic_identifier"]))
         package = self.spdx_document.package = Package(
             download_location=NoAssert(),
@@ -139,8 +141,12 @@ class SPDXFile(object):
         )
         self.set_package_info(package)
 
+        all_files_have_no_license = True
+        all_files_have_no_copyright = True
+
         if isPath(self.path_or_file):
             for file_data in self.id_scan_results:
+                file_data_instance = open(file_data["FileName"], "r")
                 if not shouldSkipFile(file_data["FileName"], self.output_file_name):
                     name = file_data["FileName"].replace(self.path_or_file, '.')
                     file_entry = File(
@@ -174,7 +180,10 @@ class SPDXFile(object):
 
         if package.files:
             spdx_output = io.StringIO()
-            write_document(self.spdx_document, spdx_output, validate=True)
+            if self.doc_type == TAG_VALUE:
+                write_document(self.spdx_document, spdx_output, validate=True)
+            else:
+                write_document(self.spdx_document, str(spdx_output), validate=True)
             result = spdx_output.getvalue()
             if self.doc_type == TAG_VALUE:
                 result = result.encode('utf-8')

@@ -19,6 +19,11 @@ SKIP_DIRECTORIES = [
     "LICENSES",
 ]
 
+# directories whose files should not be reported on and not scanned
+HIDE_DIRECTORIES = [
+    "spdx_id_doc_gen"
+]
+
 # TAG VALUE or RDF
 TAG_VALUE = "tv"
 RDF = "rdf"

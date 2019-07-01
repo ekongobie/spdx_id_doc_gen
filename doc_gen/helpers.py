@@ -1,6 +1,6 @@
 import logging
 import os
-from .utils import IGNORE_FILENAMES, SKIP_EXTENSIONS, SKIP_DIRECTORIES
+from .utils import IGNORE_FILENAMES, SKIP_EXTENSIONS, SKIP_DIRECTORIES, HIDE_DIRECTORIES
 
 class ScanData(object):
     def __init__(self):
@@ -19,10 +19,14 @@ def getAllPaths(topDir):
     paths = []
     # ignoring second item in tuple, which lists immediate subdirectories
     for (currentDir, _, filenames) in os.walk(topDir):
-        for filename in filenames:
-            if filename not in IGNORE_FILENAMES:
-                p = os.path.join(currentDir, filename)
-                paths.append(p)
+        for item in HIDE_DIRECTORIES:
+            if item in currentDir:
+                continue
+            else:
+                for filename in filenames:
+                    if filename not in IGNORE_FILENAMES:
+                        p = os.path.join(currentDir, filename)
+                        paths.append(p)
     return paths
 
 def shouldSkipFile(filePath):
