@@ -1,6 +1,8 @@
 import logging
 import os
 from os.path import basename
+from os.path import dirname
+from os.path import isdir
 import io
 import hashlib
 
@@ -75,11 +77,11 @@ class SPDXFile(object):
 
     def get_output_file(self):
         if isPath(self.path_or_file):
-            self.full_file_path = os.path.join(self.path_or_file, self.output_file_name + "." + self.doc_type)
+            self.full_file_path = os.path.join(self.path_or_file, self.output_file_name + ".spdx")
             self.output_file = open(self.full_file_path, "wb+")
         else:
             file_dir = os.path.dirname(os.path.abspath(self.path_or_file))
-            self.full_file_path = os.path.join(file_dir, self.output_file_name + "." + self.doc_type)
+            self.full_file_path = os.path.join(file_dir, self.output_file_name + ".spdx")
             self.output_file = open(self.full_file_path, "wb+")
 
     def set_creation_info(self):
@@ -107,10 +109,10 @@ class SPDXFile(object):
         # package.files = ["kfjd"]
         package.check_sum = Algorithm("SHA1", self.get_package_checksum())
 
-        package.homepage = "NONE"
+        package.homepage = SPDXNone()
         package.verif_code = self.get_package_verification_code()
 
-        package.source_info = "ksdjfnksf ksjdfnskdf"
+        package.source_info = SPDXNone()
         package.conc_lics = SPDXNone()
         #
         package.license_declared = SPDXNone()
@@ -135,6 +137,11 @@ class SPDXFile(object):
         # lic.text = "sfd"
         # self.spdx_document.add_extr_lic([lic])
         # self.spdx_document.add_extr_lic(ExtractedLicense(self.code_extra_params["lic_identifier"]))
+        if isdir(self.path_or_file):
+            input_path = self.path_or_file
+        else:
+            input_path = dirname(self.path_or_file)
+
         package = self.spdx_document.package = Package(
             download_location=NoAssert(),
             version=self.get_package_version()
@@ -183,7 +190,7 @@ class SPDXFile(object):
             if self.doc_type == TAG_VALUE:
                 write_document(self.spdx_document, spdx_output, validate=True)
             else:
-                write_document(self.spdx_document, str(spdx_output), validate=True)
+                write_document(self.spdx_document, str(spdx_output), validate=False)
             result = spdx_output.getvalue()
             if self.doc_type == TAG_VALUE:
                 result = result.encode('utf-8')
