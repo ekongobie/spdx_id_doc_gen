@@ -8,9 +8,11 @@ import sys
 from .helpers import getAllPaths, getIdentifierForPaths
 from .core import pathOrFileExists, TAG_VALUE, RDF, SPDXFile
 from .utils import isPath, isFile
+import time
 
 
 def main(item_to_scan, doc_type):
+    startTime = time.time()
     pathExists = pathOrFileExists(item_to_scan)
     is_path = isPath(item_to_scan)
     is_file = isFile(item_to_scan)
@@ -31,6 +33,7 @@ def main(item_to_scan, doc_type):
     else:
         spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, RDF)
         spdx_file.create()
+    print ('Execution time: {0} seconds.'.format(time.time() - startTime))
     sys.exit(0)
 
 

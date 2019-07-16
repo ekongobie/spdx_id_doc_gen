@@ -166,6 +166,13 @@ class SPDXFile(object):
                     else:
                         licenseref_id = 'SPDXID-Doc-Generator-' + file_data["SPDXID"]
                         spdx_license = ExtractedLicense(licenseref_id)
+                        spdx_license.name = NoAssert()
+                        comment = "N/A"
+                        spdx_license.comment = comment
+                        text = NoAssert()
+                        if not text:
+                            text = comment
+                        spdx_license.text = text
                         self.spdx_document.add_extr_lic(spdx_license)
                     file_entry.add_lics(spdx_license)
                     package.add_lics_from_file(spdx_license)
@@ -190,7 +197,8 @@ class SPDXFile(object):
             if self.doc_type == TAG_VALUE:
                 write_document(self.spdx_document, spdx_output, validate=True)
             else:
-                write_document(self.spdx_document, str(spdx_output), validate=False)
+                spdx_output = io.BytesIO()
+                write_document(self.spdx_document, spdx_output, validate=True)
             result = spdx_output.getvalue()
             if self.doc_type == TAG_VALUE:
                 result = result.encode('utf-8')

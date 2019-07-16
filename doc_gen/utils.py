@@ -12,6 +12,12 @@ IGNORE_FILENAMES = [
 # extensions to report on, but skip scanning
 SKIP_EXTENSIONS = [
     ".gif",
+    ".png",
+    ".jpg",
+    ".PNG",
+    ".pdf",
+    ".der",
+    ".bin"
 ]
 
 # directories whose files should be reported on, but skip scanning
