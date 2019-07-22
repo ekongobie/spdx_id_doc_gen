@@ -5,14 +5,13 @@ from __future__ import print_function
 import os
 import argparse
 import sys
-from .helpers import getAllPaths, getIdentifierForPaths
+from .helpers import getAllPaths, getIdentifierForPaths, get_complete_time
 from .core import pathOrFileExists, TAG_VALUE, RDF, SPDXFile
 from .utils import isPath, isFile
-import time
 
 
-def main(item_to_scan, doc_type):
-    startTime = time.time()
+@get_complete_time
+def main_util(item_to_scan, doc_type):
     pathExists = pathOrFileExists(item_to_scan)
     is_path = isPath(item_to_scan)
     is_file = isFile(item_to_scan)
@@ -33,7 +32,9 @@ def main(item_to_scan, doc_type):
     else:
         spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, RDF)
         spdx_file.create()
-    print ('Execution time: {0} seconds.'.format(time.time() - startTime))
+
+def main(item_to_scan, doc_type):
+    main_util(item_to_scan, doc_type)
     sys.exit(0)
 
 

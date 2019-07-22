@@ -18,6 +18,7 @@ from spdx.utils import SPDXNone
 from spdx.version import Version
 from .utils import TAG_VALUE, RDF, CODEBASE_EXTRA_PARAMS, FILES_TO_EXCLUDE, pathOrFileExists, isPath, isFile, get_file_hash, get_codebase_extra_params, get_package_file, get_package_version, shouldSkipFile
 from checksumdir import dirhash
+from .helpers import getAllPaths, getIdentifierForPaths, get_complete_time
 
 # class PkgChecksum(object):
 #     def __init__(self):
@@ -125,6 +126,7 @@ class SPDXFile(object):
         # package.description = "ksdjfnksf ksjdfnskdf"
         # package.verif_exc_files = ["kfjd"]
 
+    @get_complete_time
     def create(self):
         """
         Write identifier scan results as SPDX Tag/value or RDF.
@@ -133,10 +135,6 @@ class SPDXFile(object):
         self.spdx_document = Document(version=Version(2, 1),
                                  data_license=License.from_identifier(self.code_extra_params["lic_identifier"]))
         self.set_creation_info()
-        # lic = ExtractedLicense("JK", "KJNDF")
-        # lic.text = "sfd"
-        # self.spdx_document.add_extr_lic([lic])
-        # self.spdx_document.add_extr_lic(ExtractedLicense(self.code_extra_params["lic_identifier"]))
         if isdir(self.path_or_file):
             input_path = self.path_or_file
         else:

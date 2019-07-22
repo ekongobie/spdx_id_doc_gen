@@ -23,6 +23,7 @@ SKIP_EXTENSIONS = [
 # directories whose files should be reported on, but skip scanning
 SKIP_DIRECTORIES = [
     "LICENSES",
+    ".git"
 ]
 
 # directories whose files should not be reported on and not scanned

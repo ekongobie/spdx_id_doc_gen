@@ -143,8 +143,42 @@ def getIdentifierForPaths(paths, numLines=20):
              ScanData is (parsed identifier, line number) if found;
                          (None, -1) if not found.
     """
-    # print("paths", paths)
+    scan_metrics = {
+    "with_id": 0,
+    "without_id": 0,
+    "skipped": 0,
+    "total": len(paths)
+    }
     results = []
     for filePath in paths:
-        results.append(getIdentifierData(filePath, numLines))
+        id_data = getIdentifierData(filePath, numLines)
+        if id_data["SPDXID"] == "SKIPPED":
+            scan_metrics["skipped"] = scan_metrics["skipped"] + 1
+        if id_data["SPDXID"] == "NOASSERTION":
+            scan_metrics["without_id"] = scan_metrics["without_id"] + 1
+        if id_data["SPDXID"] != "SKIPPED" and id_data["SPDXID"] != "NOASSERTION":
+            scan_metrics["with_id"] = scan_metrics["with_id"] + 1
+
+        results.append(id_data)
+    print("Files info: {0}".format(scan_metrics))
     return results
+
+
+def get_complete_time(function, args=tuple(), kwargs={}):
+    """
+    ----Decorator----
+    Get real, user and system time
+    """
+    def wrappedMethod(*args, **kwargs):
+        from time import time as timestamp
+        from resource import getrusage as resource_usage, RUSAGE_SELF
+        start_time, start_resources = timestamp(), resource_usage(RUSAGE_SELF)
+        func = function(*args, **kwargs)
+        end_resources, end_time = resource_usage(RUSAGE_SELF), timestamp()
+        results = {'real': end_time - start_time,
+                   'sys': end_resources.ru_stime - start_resources.ru_stime,
+                   'user': end_resources.ru_utime - start_resources.ru_utime}
+        print("Execution time for {0}".format(function.__name__))
+        print(results)
+        return func
+    return wrappedMethod
