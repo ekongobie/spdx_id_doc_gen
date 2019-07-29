@@ -14,9 +14,7 @@ from .utils import isPath, isFile
 @get_complete_time
 def main_util(item_to_scan, doc_type, skip_pattern, recursive):
     files_to_skip = glob.glob(skip_pattern, recursive=recursive)
-    print(recursive)
     print(files_to_skip)
-    return
     pathExists = pathOrFileExists(item_to_scan)
     is_path = isPath(item_to_scan)
     is_file = isFile(item_to_scan)
