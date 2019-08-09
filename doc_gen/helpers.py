@@ -29,15 +29,33 @@ def getAllPaths(topDir):
                         paths.append(p)
     return paths
 
-def shouldSkipFile(filePath):
-    """Returns (True, "reason") if file should be skipped for scanning, (False, "") otherwise."""
-    _, extension = os.path.splitext(filePath)
-    if extension in SKIP_EXTENSIONS:
-        return (True, "skipped file extension")
-    for d in SKIP_DIRECTORIES:
+def skipDirectory(dir_list, filePath):
+    for d in dir_list:
         sd = f"/{d}/"
         if sd in filePath:
             return (True, "skipped directory")
+
+
+def shouldSkipFile(filePath, glob_to_skip):
+    """Returns (True, "reason") if file should be skipped for scanning, (False, "") otherwise."""
+    for item in glob_to_skip:
+        if item.startswith('./') and item.endswith('/'):
+            # if item is a directory
+            dir_name1 = item.replace(item[:2], '')
+            dir_name = dir_name1[:-1]
+            mk = skipDirectory([dir_name], filePath)
+            if mk != None:
+                return mk
+        elif item.startswith('./') and not item.endswith('/'):
+            file_name = item.replace(item[:1], '')
+            if item in filePath:
+                return (True, "skipped file name")
+        elif item in filePath:
+            return (True, "skipped file name")
+    _, extension = os.path.splitext(filePath)
+    if extension in SKIP_EXTENSIONS:
+        return (True, "skipped file extension")
+    skipDirectory(SKIP_DIRECTORIES, filePath)
     return (False, "")
 
 def parseLineForIdentifier(line):
@@ -51,7 +69,7 @@ def parseLineForIdentifier(line):
     identifier = identifier.strip()
     return identifier
 
-def getIdentifierData(filePath, numLines=20):
+def getIdentifierData(filePath, glob_to_skip, numLines=20):
     """
     Scans the specified file for the first SPDX-License-Identifier:
     tag in the file.
@@ -67,7 +85,7 @@ def getIdentifierData(filePath, numLines=20):
     # FIXME probably needs to be within a try block
     sd = ScanData()
     sd.filename = filePath
-    (shouldSkip, reason) = shouldSkipFile(filePath)
+    (shouldSkip, reason) = shouldSkipFile(filePath, glob_to_skip)
     if shouldSkip:
         logging.debug(f"===> Skipping {filePath}")
         sd.scanned = False
@@ -129,7 +147,7 @@ def getIdentifierData(filePath, numLines=20):
         "FileChecksum": None
     }
 
-def getIdentifierForPaths(paths, numLines=20):
+def getIdentifierForPaths(paths, glob_to_skip, numLines=20):
     """
     Scans all specified files for the first SPDX-License-Identifier:
     tag in each file.
@@ -151,7 +169,7 @@ def getIdentifierForPaths(paths, numLines=20):
     }
     results = []
     for filePath in paths:
-        id_data = getIdentifierData(filePath, numLines)
+        id_data = getIdentifierData(filePath, glob_to_skip, numLines)
         if id_data["SPDXID"] == "SKIPPED":
             scan_metrics["skipped"] = scan_metrics["skipped"] + 1
         if id_data["SPDXID"] == "NOASSERTION":

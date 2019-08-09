@@ -13,8 +13,7 @@ from .utils import isPath, isFile
 
 @get_complete_time
 def main_util(item_to_scan, doc_type, skip_pattern, recursive):
-    files_to_skip = glob.glob(skip_pattern, recursive=recursive)
-    print(files_to_skip)
+    glob_to_skip = glob.glob(skip_pattern, recursive=recursive) if type(skip_pattern) != list else skip_pattern
     pathExists = pathOrFileExists(item_to_scan)
     is_path = isPath(item_to_scan)
     is_file = isFile(item_to_scan)
@@ -25,10 +24,10 @@ def main_util(item_to_scan, doc_type, skip_pattern, recursive):
     if pathExists:
         if is_file:
             allPaths.append(item_to_scan)
-            allIdentifiers = getIdentifierForPaths(allPaths)
+            allIdentifiers = getIdentifierForPaths(allPaths, glob_to_skip)
         if is_path:
             allPaths = getAllPaths(project_path)
-            allIdentifiers = getIdentifierForPaths(allPaths)
+            allIdentifiers = getIdentifierForPaths(allPaths, glob_to_skip)
     if doc_type == TAG_VALUE:
         spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, TAG_VALUE)
         spdx_file.create()
@@ -45,7 +44,14 @@ def entry_point():
     parser = argparse.ArgumentParser(description='SPDX Document generator help.')
     parser.add_argument('project_path', help='Please add the project path.')
     parser.add_argument('doc_type', help='Please add the document type.')
-    parser.add_argument('skip', help='Pattern that will be converted by glob to files that will be skipped.')
+    parser.add_argument(
+    '-skip',
+    '--skip',
+    dest='skip',
+    required=False,
+    default=[],
+    help='Pattern that will be converted by glob to files that will be skipped.',
+)
     parser.add_argument(
     '-rec',
     '--rec',
@@ -56,7 +62,6 @@ def entry_point():
     help='Find files to skip recursively?',
 )
     args = parser.parse_args()
-    print(args)
     raise SystemExit(main(args.project_path, args.doc_type, args.skip, args.recursive))
 
 
