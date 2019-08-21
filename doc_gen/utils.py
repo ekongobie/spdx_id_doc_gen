@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 import os
 from os.path import basename
@@ -45,6 +47,7 @@ CODEBASE_EXTRA_PARAMS = {
                         "creator_comment": "Created by SPDXID Document generator",
                         "ext_doc_ref": "SPDX-DOC-GENERATOR",
                         "doc_ref": "SPDXRef-DOCUMENT",
+                        "file_ref": "SPDXRef-{0}",
                         "lic_identifier": "CC0-1.0"
                         }
 

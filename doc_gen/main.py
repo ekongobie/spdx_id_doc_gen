@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import print_function
 
 import os
@@ -12,7 +15,7 @@ from .utils import isPath, isFile
 
 
 @get_complete_time
-def main_util(item_to_scan, doc_type, skip_pattern, recursive):
+def main_util(item_to_scan, doc_type, skip_pattern, recursive, file_summary_info):
     glob_to_skip = glob.glob(skip_pattern, recursive=recursive) if type(skip_pattern) != list else skip_pattern
     pathExists = pathOrFileExists(item_to_scan)
     is_path = isPath(item_to_scan)
@@ -29,14 +32,14 @@ def main_util(item_to_scan, doc_type, skip_pattern, recursive):
             allPaths = getAllPaths(project_path)
             allIdentifiers = getIdentifierForPaths(allPaths, glob_to_skip)
     if doc_type == TAG_VALUE:
-        spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, TAG_VALUE)
+        spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, file_summary_info, TAG_VALUE)
         spdx_file.create()
     else:
-        spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, RDF)
+        spdx_file = SPDXFile(project_path, spdx_file_name, allIdentifiers, file_summary_info, RDF)
         spdx_file.create()
 
-def main(item_to_scan, doc_type, skip_pattern, recursive):
-    main_util(item_to_scan, doc_type, skip_pattern, recursive)
+def main(item_to_scan, doc_type, skip_pattern, recursive, file_summary_info):
+    main_util(item_to_scan, doc_type, skip_pattern, recursive, file_summary_info)
     sys.exit(0)
 
 
@@ -61,8 +64,17 @@ def entry_point():
     default=False,
     help='Find files to skip recursively?',
 )
+    parser.add_argument(
+    '-sum',
+    '--sum',
+    dest='file_summary_info',
+    action='store_true',
+    required=False,
+    default=False,
+    help='Add files summary information in spdx file.',
+    )
     args = parser.parse_args()
-    raise SystemExit(main(args.project_path, args.doc_type, args.skip, args.recursive))
+    raise SystemExit(main(args.project_path, args.doc_type, args.skip, args.recursive, args.file_summary_info))
 
 
 if __name__ == '__main__':

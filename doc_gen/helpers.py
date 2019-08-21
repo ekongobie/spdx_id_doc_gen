@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 import os
 from .utils import IGNORE_FILENAMES, SKIP_EXTENSIONS, SKIP_DIRECTORIES, HIDE_DIRECTORIES
@@ -122,7 +124,7 @@ def getIdentifierData(filePath, glob_to_skip, numLines=20):
                         "FileChecksum": None
                     }
         except UnicodeDecodeError:
-            print(f"Encountered invalid UTF-8 content for {filePath}")
+            # print(f"Encountered invalid UTF-8 content for {filePath}")
             # invalid UTF-8 content
             sd.scanned = False
             sd.skipReason = "encountered invalid UTF-8 content"

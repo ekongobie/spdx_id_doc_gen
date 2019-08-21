@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 import os
 from os.path import basename
@@ -19,12 +21,14 @@ from spdx.version import Version
 from .utils import TAG_VALUE, RDF, CODEBASE_EXTRA_PARAMS, FILES_TO_EXCLUDE, pathOrFileExists, isPath, isFile, get_file_hash, get_codebase_extra_params, get_package_file, get_package_version, shouldSkipFile
 from checksumdir import dirhash
 from .helpers import getAllPaths, getIdentifierForPaths, get_complete_time
+from progress.bar import Bar
+
 
 # class PkgChecksum(object):
 #     def __init__(self):
 
 class SPDXFile(object):
-    def __init__(self, path_or_file, output_file_name, id_scan_results, doc_type):
+    def __init__(self, path_or_file, output_file_name, id_scan_results, file_summary_info, doc_type):
         self.is_file = isFile(path_or_file)
         self.path_or_file = path_or_file
         self.file_to_scan = None
@@ -104,27 +108,21 @@ class SPDXFile(object):
     def set_package_info(self, package):
         # Use a set of unique copyrights for the package.
         package.name = basename(self.path_or_file)
+        if self.path_or_file == ".":
+            package.name = os.getcwd().split("/")[-1]
         if self.file_to_scan:
             package.name = "{0}/{1}".format(basename(self.path_or_file), basename(self.file_to_scan))
 
-        # package.files = ["kfjd"]
         package.check_sum = Algorithm("SHA1", self.get_package_checksum())
 
         package.homepage = SPDXNone()
         package.verif_code = self.get_package_verification_code()
 
         package.source_info = SPDXNone()
-        package.conc_lics = SPDXNone()
+        package.conc_lics = NoAssert()
         #
-        package.license_declared = SPDXNone()
-        package.cr_text = set()
-        # package.license_comment = "ksdjfnksf ksjdfnskdf"
-        #
-        # package.licenses_from_files = ["text"]
-        # package.summary = "ksdjfnksf ksjdfnskdf"
-        #
-        # package.description = "ksdjfnksf ksjdfnskdf"
-        # package.verif_exc_files = ["kfjd"]
+        package.license_declared = NoAssert()
+        package.cr_text = SPDXNone()
 
     @get_complete_time
     def create(self):
@@ -148,9 +146,11 @@ class SPDXFile(object):
 
         all_files_have_no_license = True
         all_files_have_no_copyright = True
-
+        file_license_list = []
+        file_license_ids = []
+        bar = Bar('Writing to spdx file', max=len(self.id_scan_results))
         if isPath(self.path_or_file):
-            for file_data in self.id_scan_results:
+            for idx, file_data in enumerate(self.id_scan_results):
                 file_data_instance = open(file_data["FileName"], "r")
                 if not shouldSkipFile(file_data["FileName"], self.output_file_name):
                     name = file_data["FileName"].replace(self.path_or_file, '.')
@@ -163,7 +163,9 @@ class SPDXFile(object):
                         spdx_license = License.from_identifier(file_data["SPDXID"])
                     else:
                         licenseref_id = 'SPDXID-Doc-Generator-' + file_data["SPDXID"]
-                        spdx_license = ExtractedLicense(licenseref_id)
+                        file_license_ids.append(licenseref_id)
+                        if licenseref_id in file_license_ids:
+                            spdx_license = ExtractedLicense(licenseref_id)
                         spdx_license.name = NoAssert()
                         comment = "N/A"
                         spdx_license.comment = comment
@@ -172,12 +174,18 @@ class SPDXFile(object):
                             text = comment
                         spdx_license.text = text
                         self.spdx_document.add_extr_lic(spdx_license)
+                        package.add_lics_from_file(spdx_license)
                     file_entry.add_lics(spdx_license)
-                    package.add_lics_from_file(spdx_license)
+                    file_license_list.append(spdx_license)
                     file_entry.conc_lics = NoAssert()
                     file_entry.copyright = SPDXNone()
-                    file_entry.spdx_id = self.code_extra_params["doc_ref"]
+                    file_entry.spdx_id = self.code_extra_params["file_ref"].format(idx + 1)
                     package.add_file(file_entry)
+                bar.next()
+            if self.doc_type == TAG_VALUE:
+                for spdx_license in list(set(file_license_list)):
+                    package.add_lics_from_file(spdx_license)
+        bar.finish()
 
         if len(package.files) == 0:
             if self.doc_type == TAG_VALUE:
